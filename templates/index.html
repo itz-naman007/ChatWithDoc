@@ -5,24 +5,23 @@
     <title>Multimodal RAG Assistant</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <!-- Tailwind -->
     <script src="https://cdn.tailwindcss.com"></script>
 
+    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
-    <style>
-        body { font-family: 'Inter', sans-serif; }
-    </style>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 
 <body class="bg-slate-900 text-white h-screen flex overflow-hidden">
 
-<!-- 🔹 Sidebar -->
+<!-- Sidebar -->
 <div class="w-72 bg-slate-800 border-r border-slate-700 p-5 flex flex-col">
-
     <h2 class="text-lg font-semibold mb-6">Documents</h2>
 
-    <input id="file-input" type="file" multiple
-           class="hidden" />
+    <input id="file-input" type="file" multiple class="hidden" />
 
     <button onclick="document.getElementById('file-input').click()"
         class="bg-blue-600 hover:bg-blue-700 py-2 rounded-lg mb-4">
@@ -35,36 +34,30 @@
     </button>
 
     <div id="upload-status" class="text-sm text-slate-400 mt-4"></div>
-
 </div>
 
-<!-- 🔹 Main Chat Area -->
+<!-- Main Chat Area -->
 <div class="flex-1 flex flex-col">
 
-    <!-- Header -->
     <div class="p-4 border-b border-slate-700 bg-slate-800 text-center font-semibold">
         Multimodal RAG Assistant
     </div>
 
-    <!-- Chat Messages -->
     <div id="chat-box" class="flex-1 overflow-y-auto p-6 space-y-4"></div>
 
-    <!-- Input Area -->
-<div class="p-4 bg-slate-800 border-t border-slate-700">
+    <div class="p-4 bg-slate-800 border-t border-slate-700">
 
-    <!-- 🔹 Mode Selector -->
-    <div class="mb-3">
-        <select id="mode-select"
-            class="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="mb-3">
+            <select id="mode-select"
+                class="w-full px-3 py-2 rounded-lg bg-slate-700 border border-slate-600 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="student_simple">Student</option>
+                <option value="exam_mode">Exam Mode (SOON)</option>
+                <option value="medical">Medical Analysis</option>
+                <option value="legal">Legal Analysis</option>
+                <option value="research">Research Paper Analysis</option>
+            </select>
+        </div>
 
-            <option value="student_simple"> Student</option>
-            <option value="exam_mode">Exam Mode(SOON)</option>
-            <option value="medical">Medical Analysis</option>
-            <option value="legal">Legal Analysis</option>
-            <option value="research">Research Paper Analysis</option>
-
-        </select>
-    </div>
         <div class="flex space-x-3">
             <input id="user-input" type="text"
                 placeholder="Type your message..."
@@ -76,109 +69,10 @@
             </button>
         </div>
     </div>
-
 </div>
 
-
-<script>
-
-// 🔹 Upload Files
-async function uploadFiles() {
-
-    const fileInput = document.getElementById("file-input");
-    const status = document.getElementById("upload-status");
-
-    if (fileInput.files.length === 0) {
-        status.innerText = "Please select files first.";
-        return;
-    }
-
-    const formData = new FormData();
-
-    for (let file of fileInput.files) {
-        formData.append("file", file);
-    }
-
-    status.innerText = "Processing documents...";
-
-    const response = await fetch("/upload", {
-        method: "POST",
-        body: formData
-    });
-
-    const data = await response.json();
-
-    status.innerText = data.status;
-}
-
-
-
-// 🔹 Send Chat Message
-async function sendMessage() {
-
-    const inputField = document.getElementById("user-input");
-    const chatBox = document.getElementById("chat-box");
-    const message = inputField.value.trim();
-
-    if (message === "") return;
-
-    // User bubble
-    chatBox.innerHTML += `
-        <div class="flex justify-end">
-            <div class="bg-blue-600 px-4 py-2 rounded-2xl max-w-md text-sm">
-                ${message}
-            </div>
-        </div>
-    `;
-
-    inputField.value = "";
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-    // Loading bubble
-    const loadingId = "loading-" + Date.now();
-    chatBox.innerHTML += `
-        <div id="${loadingId}" class="flex justify-start">
-            <div class="bg-slate-700 px-4 py-2 rounded-2xl max-w-md text-sm animate-pulse">
-                Thinking...
-            </div>
-        </div>
-    `;
-    chatBox.scrollTop = chatBox.scrollHeight;
-
-const selectedMode = document.getElementById("mode-select").value;
-
-const response = await fetch("/chat", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-        question: message,
-        mode: selectedMode
-    })
-});
-
-    const data = await response.json();
-
-    document.getElementById(loadingId).remove();
-
-    chatBox.innerHTML += `
-        <div class="flex justify-start">
-            <div class="bg-slate-700 px-4 py-2 rounded-2xl max-w-md text-sm">
-                ${data.answer}
-            </div>
-        </div>
-    `;
-
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
-
-
-// 🔹 Enter key support
-document.getElementById("user-input")
-    .addEventListener("keypress", function(e) {
-        if (e.key === "Enter") sendMessage();
-    });
-
-</script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/script.js') }}"></script>
 
 </body>
 </html>
