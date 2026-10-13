@@ -65,6 +65,8 @@ def upload_files():
                 documents.extend(main.read_pdf_documents([file.stream], filename))
             elif extension == ".docx":
                 documents.extend(main.read_docx_documents(file.stream, filename))
+            elif extension == ".csv":
+                documents.extend(main.read_csv_file(file.stream, filename))
             else:
                 documents.extend(main.read_text_file(file.stream, filename))
         except Exception as error:
@@ -106,13 +108,12 @@ def chat():
     retrieval_question = main.rewrite_question(question, history)
     mode = data.get("mode", "student")
     top_k = 8 if mode == "summarize" else int(os.getenv("TOP_K", "4"))
-    query_start = time.perf_counter()
-    results = main.search_text(retrieval_question, state["index"], state["chunks"], k=top_k, final_k=top_k, return_scores=True)
-    query_ms = round((time.perf_counter() - query_start) * 1000, 2)
+    retrieval_timings = {}
+    results = main.search_text(retrieval_question, state["index"], state["chunks"], k=top_k, final_k=top_k, return_scores=True, timings=retrieval_timings)
 
     # Stop if no relevant chunks are found
     if not results:
-        return jsonify({"answer": "Not found in document.", "sources": [], "timings_ms": {"query_ms": query_ms}})
+        return jsonify({"answer": "Not found in document.", "sources": [], "timings_ms": retrieval_timings})
 
     context = "\n\n".join(f"[Source: {r['chunk']['source']}]\n{r['chunk']['text']}" for r in results)
     sources = [{"filename": r["chunk"]["source"], "page": r["chunk"].get("page")} for r in results]
@@ -132,7 +133,7 @@ def chat():
     state["chat_history"] = history[-5:]
     _save_state(state)
 
-    timings = {"query_ms": query_ms, "groq_ms": groq_ms}
+    timings = {**retrieval_timings, "groq_ms": groq_ms}
     logger.info("Chat timings_ms=%s", timings)
     return jsonify({"answer": answer, "sources": sources, "timings_ms": timings})
 

@@ -1,5 +1,7 @@
 import logging
 import os
+import csv
+import time
 from functools import lru_cache
 
 import faiss
@@ -57,6 +59,12 @@ def read_docx_documents(file, source="document.docx"):
 
 def read_text_file(file, source):
     text = file.read().decode("utf-8", errors="replace")
+    return [{"text": text, "source": source, "page": None}] if text.strip() else []
+
+
+def read_csv_file(file, source):
+    rows = csv.reader(file.read().decode("utf-8", errors="replace").splitlines())
+    text = "\n".join(" | ".join(row) for row in rows)
     return [{"text": text, "source": source, "page": None}] if text.strip() else []
 
 
@@ -123,14 +131,20 @@ def _cached_query_embedding(query):
     return tuple(_get_text_model().encode([query], normalize_embeddings=True)[0].astype("float32"))
 
 
-def search_text(query, index, chunks, k=10, final_k=None, return_scores=False):
+def search_text(query, index, chunks, k=10, final_k=None, return_scores=False, timings=None):
     if index is None or not chunks or index.ntotal == 0:
         return []
     limit = min(k, index.ntotal, len(chunks))
     if limit <= 0:
         return []
+    embedding_start = time.perf_counter()
     query_embedding = np.asarray([_cached_query_embedding(query)], dtype="float32")
+    if timings is not None:
+        timings["query_embedding_ms"] = round((time.perf_counter() - embedding_start) * 1000, 2)
+    search_start = time.perf_counter()
     scores, indices = index.search(query_embedding, limit)
+    if timings is not None:
+        timings["faiss_search_ms"] = round((time.perf_counter() - search_start) * 1000, 2)
     candidates = []
     for score, idx in zip(scores[0], indices[0]):
         if idx < 0 or float(score) < MIN_SCORE:
