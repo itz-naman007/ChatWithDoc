@@ -115,7 +115,12 @@ def chat():
     if not results:
         return jsonify({"answer": "Not found in document.", "sources": [], "timings_ms": retrieval_timings})
 
-    context = "\n\n".join(f"[Source: {r['chunk']['source']}]\n{r['chunk']['text']}" for r in results)
+    context = "\n\n".join(
+        f"[Source: {r['chunk']['source']}"
+        f"{', page ' + str(r['chunk']['page']) if r['chunk'].get('page') else ''}]\n"
+        f"{r['chunk']['text']}"
+        for r in results
+    )
     sources = [{"filename": r["chunk"]["source"], "page": r["chunk"].get("page")} for r in results]
 
     # Generate answer with memory

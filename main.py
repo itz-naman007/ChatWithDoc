@@ -158,10 +158,32 @@ def search_text(query, index, chunks, k=10, final_k=None, return_scores=False, t
 
 
 MODE_PROMPTS = {
-    "student": "Explain in simple language, use short bullets, and stay concise.",
-    "medical": "Use a precise clinical tone and only state findings supported by context.",
-    "legal": "Use formal legal language and identify clauses, obligations, and liabilities.",
-    "research": "Use an academic tone with Introduction, Key Points, and Conclusion.",
+    "student": """
+- Explain in simple language.
+- Avoid complex terminology.
+- Use bullet points and keep the answer short and clear.
+- Use examples if possible.
+- Answer in the language used by the question.
+- Maintain a neutral, factual, and professional tone.
+""",
+    "medical": """
+- Use clinical tone and focus on findings, interpretation, and conclusion.
+- Be concise and precise.
+- Use the medical report format when applicable.
+- Do not add information not explicitly stated in the context.
+""",
+    "legal": """
+- Use formal legal language.
+- Focus on clauses, obligations, and liabilities.
+- Structure the answer around issue, relevant clauses, obligations, and conclusion.
+- Use only information directly extracted from the provided documents.
+""",
+    "research": """
+- Use academic tone.
+- Structure the answer as Introduction, Key Points, and Conclusion.
+- Present multiple findings in a balanced way without unsupported claims.
+- Paraphrase the context rather than copying it directly.
+""",
     "summarize": "Summarize the document context, emphasizing the main ideas and supporting details.",
 }
 MODE_PROMPTS["student_simple"] = MODE_PROMPTS["student"]
