@@ -54,11 +54,11 @@ Modes include `student`, `medical`, `legal`, `research`, and `summarize`. Follow
 
 ## Measured timings
 
-The focused regression suite on this machine completed in **5.96 seconds** for four tests. The tests mock model and network calls, so they do not represent model inference. Live stage timing values are emitted in logs and in `/chat`'s `timings_ms` response; no real document/model benchmark was recorded because the default model was not downloaded.
+The focused regression suite on this machine completed in **5.38 seconds** for four tests. The tests mock model and network calls, so they do not represent model inference. Live stage timing values are emitted in logs and in `/chat`'s `timings_ms` response; no real document/model benchmark was recorded because the default model was not downloaded.
 
 | Measurement | Result |
 |---|---:|
-| Focused regression suite, 4 tests | 5.96 s |
+| Focused regression suite, 4 tests | 5.38 s |
 | Live parsing/chunking/embedding/indexing | not measured |
 | Live query embedding/FAISS/Groq | not measured |
 
