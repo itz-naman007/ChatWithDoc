@@ -12,7 +12,7 @@ def home():
     return render_template("index.html")
 
 
-# 🔹 File Upload Route
+#  File Upload Route
 @app.route("/upload", methods=["POST"])
 def upload_files():
     global text_index, text_chunks
@@ -35,7 +35,7 @@ def upload_files():
     return jsonify({"status": "Documents processed successfully"})
 
 
-# 🔹 Chat Route (For GPT UI)
+#  Chat Route 
 @app.route("/chat", methods=["POST"])
 def chat():
     global text_index, text_chunks
@@ -46,15 +46,24 @@ def chat():
     if not question:
         return jsonify({"answer": "No question provided."})
 
-    if not text_index:
+    if text_index is None or len(text_chunks) == 0:
         return jsonify({"answer": "Please upload documents first."})
 
     # Initialize memory
     if "chat_history" not in session:
         session["chat_history"] = []
 
-    # Retrieve context
-    results = main.search_text(question, text_index, text_chunks)[:3]
+    # Retrieve filtered and reranked context
+    results = main.search_text(
+        question, text_index, text_chunks
+    )[:3]
+
+    # Stop if no relevant chunks are found
+    if not results:
+        return jsonify({
+            "answer": "Not found in document."
+        })
+
     context = "\n\n".join(results)
 
     mode = data.get("mode", "student")
@@ -72,6 +81,7 @@ def chat():
     session.modified = True
 
     return jsonify({"answer": answer})
+
 
 if __name__ == "__main__":
     app.run(debug=True)
