@@ -73,10 +73,15 @@ async function sendMessage() {
 
     document.getElementById(loadingId).remove();
 
+    const sources = (data.sources || [])
+        .map(source => `${source.filename}${source.page ? ` (page ${source.page})` : ""}`)
+        .join(", ");
+
     chatBox.innerHTML += `
         <div class="flex justify-start">
             <div class="bg-slate-700 px-4 py-2 rounded-2xl max-w-md text-sm">
                 ${data.answer}
+                ${sources ? `<div class="mt-2 text-xs text-slate-400">Sources: ${sources}</div>` : ""}
             </div>
         </div>
     `;
