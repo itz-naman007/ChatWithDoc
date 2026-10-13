@@ -8,7 +8,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 from PyPDF2 import PdfReader
 from docx import Document
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, CrossEncoder
 from transformers import AutoProcessor,AutoModel
 
 load_dotenv()
@@ -16,7 +16,11 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Load models ONCE
 text_model = SentenceTransformer("BAAI/bge-large-en-v1.5")
-# image_model = SentenceTransformer("clip-ViT-B-32-multilingual-v1.5")
+
+reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
+
+SIMILARITY_THRESHOLD = 0.40
+FINAL_K = 3
 
 # ---------------- TEXT ----------------
 def read_pdfs(files):
@@ -59,7 +63,6 @@ def extract_images_from_pdf(file):
     return images
 
 
-# ---------------- FAISS ----------------
 def build_text_index(chunks):
 
     if not chunks:
@@ -69,7 +72,7 @@ def build_text_index(chunks):
 
     embeddings = np.array(embeddings)
 
-    # 🔥 Ensure 2D
+    # Ensure 2D
     if embeddings.ndim == 1:
         embeddings = embeddings.reshape(1, -1)
 
@@ -82,23 +85,52 @@ def build_text_index(chunks):
 
 
 
-def build_image_index(images):
-    embeddings = image_model.encode(images, normalize_embeddings=True)
-    dim = embeddings.shape[1]
-    index = faiss.IndexFlatIP(dim)
-    index.add(np.array(embeddings).astype("float32"))
-    return index
+# Retrival
+def search_text(query, index, chunks, k=10):
+    # Handle missing index or chunks
+    if index is None or not chunks:
+        return []
 
-# ---------------- RETRIEVAL ----------------
-def search_text(query, index, chunks, k=4):
-    q_emb = text_model.encode([query], normalize_embeddings=True).astype("float32")
-    _, indices = index.search(q_emb, k)
-    return [chunks[i] for i in indices[0]]
+    # Step 1: Embed the question
+    q_emb = text_model.encode(
+        [query],
+        normalize_embeddings=True
+    ).astype("float32")
 
-def search_images(query, index, images, k=2):
-    q_emb = image_model.encode([query], normalize_embeddings=True).astype("float32")
-    _, indices = index.search(q_emb, k)
-    return [images[i] for i in indices[0]]
+    # Step 2: Retrieve top candidate chunks
+    k = min(k, len(chunks))
+    scores, indices = index.search(q_emb, k)
+
+    candidates = []
+
+    # Step 3: Apply similarity threshold
+    for score, idx in zip(scores[0], indices[0]):
+        if idx < 0:
+            continue
+
+        if float(score) >= SIMILARITY_THRESHOLD:
+            candidates.append(chunks[int(idx)])
+
+    # No relevant chunks found
+    if not candidates:
+        return []
+
+    # Step 4: Rerank candidates
+    pairs = [(query, chunk) for chunk in candidates]
+
+    rerank_scores = reranker.predict(pairs)
+
+    ranked_chunks = sorted(
+        zip(rerank_scores, candidates),
+        key=lambda item: float(item[0]),
+        reverse=True
+    )
+
+    # Step 5: Return top relevant chunks
+    return [
+        chunk for score, chunk in ranked_chunks[:FINAL_K]
+    ]
+
 
 # ---------------- Model_Prompts ----------------
 
@@ -183,6 +215,8 @@ MODE_PROMPTS = {
 model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
 processor = AutoProcessor.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
 
+if not context or not context.strip():
+    return "Not found in document."
 # ---------------- GROQ ----------------
 def ask_groq(context, question, chat_history=None, mode="student"):
 
